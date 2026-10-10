@@ -41,7 +41,7 @@ main{padding:16px;display:grid;gap:12px;max-width:640px;margin:0 auto}
 .ch{border:0;border-radius:20px;padding:7px 14px;font:inherit;font-size:.88rem;background:var(--blush);color:var(--pt);cursor:pointer}
 .ch.on{background:var(--plum);color:#fff}
 .tg{display:inline-block;border-radius:20px;padding:3px 12px;font-size:.88rem;color:#fff;background:var(--plum)}
-.tg.add{background:var(--rose)}.tg.sale{background:var(--ok)}.tg.pay{background:#6B5BD6}.tg.ret,.tg.sret{background:#D9822B}
+.tg.add{background:var(--rose)}.tg.sale{background:var(--ok)}.tg.pay,.tg.mrg{background:#6B5BD6}.tg.ret,.tg.sret{background:#D9822B}
 .nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);padding:8px 6px calc(8px + env(safe-area-inset-bottom));box-shadow:0 -4px 16px rgba(78,35,66,.1);z-index:4}
 .nav button{flex:1;border:0;background:none;font:inherit;padding:12px 2px;border-radius:16px;font-size:.84rem;color:var(--mut);cursor:pointer}
 .nav button.on{background:var(--blush);color:var(--pt);font-weight:700}
@@ -387,7 +387,7 @@ function render(){
   if(tab==="p"){
     $("sub").textContent="خرید و فروش";
     h=`<div class="home"><div class="hc"><div><span class="hi">🏬</span><h2>خرید</h2></div><button class="hbn red" data-go="s">ثبت</button></div>
-    <div class="hc"><div><span class="hi">🛍️</span><h2>فروش</h2></div><button class="hbn green" data-go="b">ثبت</button></div></div>`;
+    <div class="hc"><div><span class="hi">🛍️</span><h2>فروش</h2></div><button class="hbn green" data-go="b">ثبت</button></div></div>${bkCard()}`;
   }else if(tab==="b"){
     const bl=buyerList();$("sub").textContent=`${fa(bl.length)} خریدار`;
     h=`<button class="ch" data-go="p" style="justify-self:start">→ خانه</button>`
@@ -438,7 +438,7 @@ function render(){
     }
   }else{
     $("sub").textContent=`${fa(db.hist.length)} رویداد`;
-    const T={buy:"خرید",add:"کالای جدید",sale:"فروش",pay:"پرداخت قسط",ret:"مرجوعی",sret:"مرجوعی به فروشنده"};
+    const T={buy:"خرید",add:"کالای جدید",sale:"فروش",pay:"پرداخت قسط",ret:"مرجوعی",sret:"مرجوعی به فروشنده",mrg:"یکی کردن قسط"};
     h=db.hist.map(e=>`<article class="c h${e.buyer?" lnk":""}"${e.buyer?` data-buyer="${esc(e.buyer)}"`:""}><button class="x" data-del="h" data-id="${e.id}" aria-label="حذف">×</button><h2 style="padding-right:42px"><span class="tg ${e.type}">${esc(e.title||T[e.type])}</span></h2><p>${fa(e.date)} ${fa(e.time||"")}</p>${e.lines.map(l=>`<p>${esc(l)}</p>`).join("")}${e.total?`<p><b>جمع: ${money(e.total)}</b></p>`:""}</article>`).join("");
     if(!h)h='<div class="empty">هنوز رویدادی ثبت نشده.<br>خرید، اضافه شدن کالا، فروش و قسط‌ها اینجا میان.</div>';
   }
@@ -540,8 +540,9 @@ function openShop(){
   ${fld("sh_k","کلید هوش مصنوعی","n",`autocomplete="off" value="${esc((db.ai||{}).key||"")}"`)}<p>فقط برای خوندن خودکار عکس فاکتور و کارت فروشنده لازمه و اینترنت می‌خواد. بدون کلید، عکس رو می‌گیری و خودت پر می‌کنی.</p></div>
   <div class="sec"><h4>قفل برنامه</h4><p style="margin:0">${lkGet()?"قفل فعال است ✓ هر بار که برنامه رو باز می‌کنی، یا بیشتر از یک دقیقه بیرون بودی، رمز می‌خواد.":"با یه رمز ۴ رقمی، فقط خودت می‌تونی برنامه رو باز کنی."}</p><div class="acts" style="margin-top:10px">${lkGet()?`<button class="b g" data-lk="change">تغییر رمز</button><button class="b g" data-lk="off">غیرفعال کردن</button>`:`<button class="b" data-lk="on">🔒 فعال کردن قفل</button>`}</div></div>
   <div class="sec"><h4>نصب روی گوشی</h4><p style="margin:0">${instInfo()}</p>${deferredInstall?`<div class="acts" style="margin-top:10px"><button class="b" data-inst="1">📲 نصب برنامه</button></div>`:""}</div>
-  <div class="sec"><h4>پشتیبان‌گیری</h4><p style="margin:0 0 10px">اطلاعات فقط روی همین گوشی ذخیره می‌شود. هر چند وقت یک بار نسخه‌ی پشتیبان بگیر تا با پاک شدن مرورگر از بین نرود.</p><div class="acts"><button class="b g" data-bk="1">⬇️ دانلود پشتیبان</button><button class="b g" data-rs="1">⬆️ بازیابی</button></div></div>
+  <div class="sec"><h4>پشتیبان‌گیری</h4><p style="margin:0 0 10px">اطلاعات فقط روی همین گوشی ذخیره می‌شود. برنامه هر هفته خودش یک نسخه‌ی پشتیبان داخل همین گوشی می‌گیرد و قبلی را پاک می‌کند. ولی برای ایمنی کامل، هر هفته فایل هم دانلود کن تا با پاک شدن مرورگر از بین نرود.</p><div class="acts"><button class="b g" data-bk="1">⬇️ دانلود پشتیبان</button><button class="b g" data-rs="1">⬆️ بازیابی</button></div><p id="snapinfo" style="margin:10px 0 0">پشتیبان خودکار: …</p><button class="b g" data-snaprs="1" style="width:100%;margin-top:8px">🛟 بازگردانی از پشتیبان خودکار</button></div>
   <div class="acts" style="margin-top:14px"><button class="b g" onclick="closeM()">بستن</button><button class="b" id="ok">ذخیره</button></div>`);
+  snapGet().then(v=>{const el=$("snapinfo");if(el)el.textContent=v?"آخرین پشتیبان خودکار: "+fa(new Date(v.t).toLocaleDateString("fa-IR-u-nu-latn",{year:"numeric",month:"2-digit",day:"2-digit"})):"هنوز پشتیبان خودکاری ساخته نشده."});
   $("ok").onclick=()=>{db.shop={name:$("sh_n").value.trim(),phone:$("sh_p").value.trim(),addr:$("sh_a").value.trim()};db.ai={key:$("sh_k").value.trim()};save();closeM();toast("ذخیره شد ✓")};
 }
 /* scan (camera) */
@@ -728,7 +729,7 @@ function openBuyer(name,keep){
   bv={n:name};
   const ps=people().find(p=>p.key===key),insts=os.filter(o=>o.inst);
   const plans=insts.length?`<div class="c"><h2 style="padding:0">قسط‌ها</h2>`+insts.map(o=>`<div style="border-top:1px solid var(--blush);margin-top:10px">${planBlock(o)}${act(o)?`<small>قسط بعدی: ${fa(dueOf(o))}</small>`:""}${act(o)&&lateStr(dueOf(o))?`<small style="color:var(--warn);font-weight:700">⚠ ${lateStr(dueOf(o))}</small>`:""}</div>`).join("")
-    +(ps?`${payBlock(ps)}${contactBtns(ps)}`:"")+`</div>`:"";
+    +(ps?`${payBlock(ps)}${ps.plans.length>1?'<button class="b g sm" style="width:100%" data-merge="1">🔗 یکی کردن قسط‌ها</button>':""}${contactBtns(ps)}`:"")+`</div>`:"";
   const keepSt=$("pg").scrollTop,ph=phoneOf(name),tot=os.reduce((a,o)=>a+(o.total||0),0);
   const head=`<div class="c pf"><button class="pe" data-be="1" aria-label="ویرایش">✏️</button><h2>${esc(name||"بدون نام")}</h2><p>${ph?`<a href="tel:${esc(nd(ph))}">${esc(ph)}</a>`:"شماره‌ای ثبت نشده"}</p><div class="st"><div><span>خریدها</span><b>${os.length}</b></div><div><span>مجموع خرید</span><b>${f0(tot)}</b></div><div><span>باقی‌مانده</span><b>${f0(ps?ps.remain:0)}</b></div></div></div>`;
   let rcv="";
@@ -906,7 +907,7 @@ function invText(o){
   if(sh.phone)L.push("📞 "+sh.phone);if(sh.addr)L.push(sh.addr);
   L.push(`شماره: ${fa(o.no||"")} | تاریخ: ${fa(o.date)}`,`خریدار: ${o.buyer||"—"}${o.phone?" ("+o.phone+")":""}`,"──────────");
   o.items.forEach(i=>i.rows.forEach(r=>L.push(`${i.name}${r.color||r.size?" "+vl(r):""} — ${fa(r.qty)} × ${f0(i.price||0)} = ${f0((i.price||0)*r.qty)}`)));
-  if(o.disc)L.push("تخفیف: "+money(o.disc));L.push("──────────","جمع کل: "+money(o.total));if(o.pre)L.push("پیش‌پرداخت: "+money(o.pre));
+  if(o.disc)L.push("تخفیف: "+money(o.disc));L.push("──────────","جمع کل: "+money(o.total));if(o.pre)L.push((o.merged?"پرداخت‌شده تا قبل از یکی‌کردن: ":"پیش‌پرداخت: ")+money(o.pre));
   if(o.inst){L.push("",`خرید قسطی — ${fa(o.inst.months)} ماهه`);for(let n=1;n<=o.inst.months;n++)L.push(`قسط ${fa(n)}: ${fa(addM(o.inst.start,n-1))} — ${money(instAmt(o,n))}${n<=o.inst.paid?" ✓ پرداخت شد":""}`);L.push("باقی‌مانده: "+money(act(o)?remain(o):0))}
   return L.join("\n");
 }
@@ -920,7 +921,7 @@ function openInvoice(id){
   <div class="wrap"><table class="tb"><tr><th>کالا</th><th>تعداد</th><th>قیمت</th><th>جمع</th></tr>
   ${o.items.map(i=>i.rows.map(r=>`<tr><td>${esc(i.name)}${r.color||r.size?`<br><small style="color:var(--mut)">${esc(vl(r))}</small>`:""}</td><td>${fa(r.qty)}</td><td>${f0(i.price||0)}</td><td>${f0((i.price||0)*r.qty)}</td></tr>`).join("")).join("")}</table></div>
   ${o.disc?`<div class="sum"><span>تخفیف</span><span>−${money(o.disc)}</span></div>`:""}<div class="sum"><span>جمع کل</span><span>${money(o.total)}</span></div>
-  ${o.pre?`<div class="sum"><span>پیش‌پرداخت</span><span>${money(o.pre)}</span></div>`:""}${o.inst?`<h2 style="margin-top:16px;font-size:1rem">جدول قسط‌ها (${fa(o.inst.months)} ماهه)</h2><div class="wrap"><table class="tb"><tr><th>قسط</th><th>سررسید</th><th>مبلغ</th><th>وضعیت</th></tr>${Array.from({length:o.inst.months},(_,k)=>`<tr><td>${fa(k+1)}</td><td>${fa(addM(o.inst.start,k))}</td><td>${f0(instAmt(o,k+1))}</td><td>${k<o.inst.paid?"✓ پرداخت شد":"—"}</td></tr>`).join("")}</table></div><div class="sum"><span>باقی‌مانده</span><span>${money(act(o)?remain(o):0)}</span></div>`:""}
+  ${o.pre?`<div class="sum"><span>${o.merged?"پرداخت‌شده تا قبل از یکی‌کردن":"پیش‌پرداخت"}</span><span>${money(o.pre)}</span></div>`:""}${o.inst?`<h2 style="margin-top:16px;font-size:1rem">جدول قسط‌ها (${fa(o.inst.months)} ماهه)</h2><div class="wrap"><table class="tb"><tr><th>قسط</th><th>سررسید</th><th>مبلغ</th><th>وضعیت</th></tr>${Array.from({length:o.inst.months},(_,k)=>`<tr><td>${fa(k+1)}</td><td>${fa(addM(o.inst.start,k))}</td><td>${f0(instAmt(o,k+1))}</td><td>${k<o.inst.paid?"✓ پرداخت شد":"—"}</td></tr>`).join("")}</table></div><div class="sum"><span>باقی‌مانده</span><span>${money(act(o)?remain(o):0)}</span></div>`:""}
   </div><div class="acts noprint"><button class="b" data-iv="share">ارسال</button><button class="b g" data-iv="copy">کپی متن</button><button class="b g" data-iv="print">چاپ</button></div></div>`;
   pgOpen();$("pg").scrollTop=0;
 }
@@ -958,7 +959,7 @@ $("rf").addEventListener("change",e=>{
   });
 });
 document.addEventListener("click",e=>{
-  if(e.target.closest("[data-bk]")){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(db)],{type:"application/json"}));a.download="resta-backup-"+today().replace(/\//g,"-")+".json";document.body.appendChild(a);a.click();a.remove();toast("نسخه‌ی پشتیبان ذخیره شد ✓");return}
+  if(e.target.closest("[data-bk]")){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(db)],{type:"application/json"}));a.download="resta-backup-"+today().replace(/\//g,"-")+".json";document.body.appendChild(a);a.click();a.remove();localStorage.setItem("resta-lastdl",Date.now());toast("نسخه‌ی پشتیبان ذخیره شد ✓");render();return}
   if(e.target.closest("[data-rs]")){$("rf").click();return}
   if(e.target.closest("[data-inst]")){if(deferredInstall){deferredInstall.prompt();deferredInstall=null;closeM()}return}
   const th=e.target.closest("[data-th]");if(th){db.theme=th.dataset.th;save();applyTheme();th.parentNode.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b===th));return}
@@ -1012,6 +1013,7 @@ $("pg").addEventListener("click",e=>{
   if(sx&&sr){const a2=sx.dataset.sr;if(a2==="ok")return saveSr();const i2=+sx.dataset.i,k2=+sx.dataset.k,it=sr.items[i2],p=db.products.find(x=>x.id===it.pid);
     if(a2==="p")it.q[k2]=Math.min(p.variants[k2].qty,it.q[k2]+1);else it.q[k2]=Math.max(0,it.q[k2]-1);showSr();return}
   const sr1=T("[data-sret]");if(sr1)return openSr(+sr1.dataset.sret);
+  const mg=T("[data-merge]");if(mg&&bv)return openMerge(bv.n);
   const sb=T("[data-sbuy]");if(sb)return openCart("buy",+sb.dataset.sbuy);
   const se=T("[data-sedit]");if(se)return supForm(+se.dataset.sedit);
   const rt0=T("[data-ret]");if(rt0&&bv)return openRet(+rt0.dataset.ret);
@@ -1086,6 +1088,44 @@ document.addEventListener("click",e=>{
     db.purchases=db.purchases.filter(p=>!ids.includes(p.id));db.hist=db.hist.filter(h=>!ids.includes(h.id));
   });
 });
+/* auto backup (one internal copy, replaced weekly) */
+const idb=()=>new Promise((res,rej)=>{const r=indexedDB.open("resta-bak",1);r.onupgradeneeded=()=>r.result.createObjectStore("s");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+async function snapGet(){try{const d=await idb();return await new Promise((res,rej)=>{const q=d.transaction("s").objectStore("s").get("snap");q.onsuccess=()=>res(q.result||null);q.onerror=()=>rej()})}catch(e){return null}}
+async function snapPut(v){try{const d=await idb();await new Promise((res,rej)=>{const t=d.transaction("s","readwrite");t.objectStore("s").put(v,"snap");t.oncomplete=res;t.onerror=rej})}catch(e){}}
+const hasData=()=>db.orders.length||db.products.length||db.suppliers.length||db.purchases.length;
+async function autoSnap(){if(!hasData())return;const cur=await snapGet();if(cur&&Date.now()-cur.t<7*864e5)return;await snapPut({t:Date.now(),d:JSON.stringify(db)})}
+function bkCard(){
+  if(!hasData())return"";const t=+localStorage.getItem("resta-lastdl")||0;if(Date.now()-t<7*864e5)return"";
+  return `<section class="c"><h2 style="padding:0">🗂️ پشتیبان هفتگی</h2><p style="padding:0">${t?"یک هفته یا بیشتر از آخرین پشتیبان فایل گذشته.":"هنوز از اطلاعاتت فایل پشتیبان نگرفتی."} برای اینکه اطلاعات از بین نره، همین الان یکی بگیر.</p><button class="b sm" style="width:100%" data-bk="1">⬇️ دانلود پشتیبان</button></section>`;
+}
+document.addEventListener("click",async e=>{
+  if(!e.target.closest("[data-snaprs]"))return;
+  const v=await snapGet();if(!v)return toast("هنوز پشتیبان خودکاری ساخته نشده.");
+  openM(`<h3>بازگردانی از پشتیبان خودکار</h3><p style="color:var(--mut);line-height:1.9">اطلاعات فعلی با نسخه‌ی ${fa(new Date(v.t).toLocaleDateString("fa-IR-u-nu-latn",{year:"numeric",month:"2-digit",day:"2-digit"}))} جایگزین می‌شود و هر چیزی که بعد از آن ثبت کرده‌ای از بین می‌رود. ادامه می‌دی؟</p><div class="acts" style="margin-top:12px"><button class="b g" onclick="closeM()">نه</button><button class="b" id="snry">بله، بازگردانی کن</button></div>`);
+  $("snry").onclick=()=>{localStorage.setItem("resta",v.d);location.reload()};
+});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)autoSnap()});
+/* merge installments */
+function openMerge(name){
+  const ps=people().find(p=>p.key===nk(name));
+  if(!ps||ps.plans.length<2)return tell("این مشتری دو قسط فعال نداره.");
+  const pl=ps.plans,def=Math.max(...pl.map(o=>o.inst.months-o.inst.paid)),tot=pl.reduce((a,o)=>a+remain(o),0);
+  openM(`<h3>🔗 یکی کردن قسط‌ها</h3><p style="color:var(--mut);margin:4px 0 8px;line-height:1.8">همه‌ی قسط‌های باقی‌مانده‌ی ${esc(name)} با هم جمع می‌شن و توی تعداد ماهی که بنویسی تصفیه می‌شن. قسط‌هایی که تا الان داده حساب شده.</p>${pl.map(o=>`<div class="vr"><span>فاکتور ${fa(o.no||"")}<small>${fa(o.inst.months-o.inst.paid)} قسط مونده</small></span><b>${f0(remain(o))}</b></div>`).join("")}<div class="sum"><span>جمع باقی‌مانده</span><span>${money(tot)}</span></div><label for="mgm">تعداد ماه</label><input id="mgm" class="n" inputmode="numeric" value="${def}"><div class="sum" style="margin-top:10px"><span id="mgp"></span></div><p class="err" id="mge"></p><div class="acts"><button class="b g" onclick="closeM()">بستن</button><button class="b" id="mgo">یکی کن</button></div>`);
+  const upd=()=>{const m=Math.floor(num($("mgm").value));$("mgp").textContent=m>=1&&m<=60?`ماهی حدود ${money(Math.round(tot/m))}`:"تعداد ماه رو بین ۱ تا ۶۰ بنویس."};
+  $("mgm").oninput=upd;upd();
+  $("mgo").onclick=()=>{const m=Math.floor(num($("mgm").value));if(!(m>=1&&m<=60))return $("mge").textContent="تعداد ماه رو بین ۱ تا ۶۰ بنویس.";mergeInst(ps,m)};
+}
+function mergeInst(ps,N){
+  const t0=today(),dues=ps.plans.map(dueOf).sort(),D=dues[0]<t0?t0:dues[0],lines=[];let tot=0;
+  ps.plans.forEach(o=>{
+    const R=remain(o),rec=paidSum(o),c=calcInst(R,N);
+    o.prev={inst:{...o.inst},pre:o.pre||0};
+    o.pre=Math.round(rec);o.merged=true;o.inst={months:N,monthly:c.monthly,last:c.last,paid:0,start:D};
+    tot+=R;lines.push(`فاکتور ${fa(o.no||"")}: باقی‌مانده ${f0(R)} ← ماهی ${f0(c.monthly)}`);
+  });
+  log("mrg","یکی کردن قسط‌ها — "+ps.name,[...lines,`${fa(N)} ماه · اولین قسط ${fa(D)}`],tot);db.hist[0].buyer=ps.name;
+  save();closeM();if(bv)openBuyer(bv.n,1);render();toast("قسط‌ها یکی شد ✓");
+}
 /* product photo */
 let phIdx=null;
 function shrink(file,max=420,q=.65){return new Promise((res,rej)=>{
@@ -1198,6 +1238,7 @@ document.addEventListener("click",e=>{if(e.target.closest("[data-sr0]")){closeDr
 applyTheme();
 showLock();
 render();
+autoSnap();
 </script>
 </body>
 </html>
