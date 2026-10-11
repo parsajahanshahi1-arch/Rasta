@@ -524,7 +524,7 @@ function supForm(id,opt){
 function suppProds(id){
   const m=new Map();
   db.purchases.forEach(pu=>{if(pu.sup!==id)return;pu.items.forEach(it=>m.set(it.pid,(m.get(it.pid)||0)+it.qty))});
-  return [...m].map(([pid,q])=>({p:db.products.find(x=>x.id===pid),q})).filter(x=>x.p).map(({p,q})=>`<article class="c lnk" data-prodv="${p.id}"><button class="ex" data-pedit="${p.id}" aria-label="ویرایش">✏️</button><h2 style="padding:0 0 0 44px">${esc(p.name)}</h2><p style="padding:0">${esc(p.code||"")}</p>
+  return [...m].map(([pid,q])=>({p:db.products.find(x=>x.id===pid),q})).filter(x=>x.p&&stock(x.p)>0).map(({p,q})=>`<article class="c lnk" data-prodv="${p.id}"><button class="ex" data-pedit="${p.id}" aria-label="ویرایش">✏️</button><h2 style="padding:0 0 0 44px">${esc(p.name)}</h2><p style="padding:0">${esc(p.code||"")}</p>
     <div class="st"><div><span>موجودی</span><b>${fa(stock(p))}</b></div><div><span>قیمت خرید</span><b>${f0(p.buy||0)}</b></div><div><span>قیمت فروش</span><b>${p.noProfit||!sellOf(p)?"ثبت نشده":f0(sellOf(p))}</b></div></div>
     ${p.img?`<div class="prw"><img class="pi" src="${p.img}" alt="${esc(p.name)}">`:""}<div class="chips"${p.img?' style="margin-top:0;flex:1;align-content:flex-start"':""}><i>از این فروشنده: ${fa(q)} عدد</i>${p.variants.filter(v=>v.qty>0).map(v=>`<i>${esc(vl(v)||"—")}: ${fa(v.qty)}</i>`).join("")}</div>${p.img?"</div>":""}</article>`);
 }
