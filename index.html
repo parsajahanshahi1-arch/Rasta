@@ -521,14 +521,21 @@ function supForm(id,opt){
     save();render();closeM();if(sv&&id)openSupplier(id);
   };
 }
+function suppProds(id){
+  const m=new Map();
+  db.purchases.forEach(pu=>{if(pu.sup!==id)return;pu.items.forEach(it=>m.set(it.pid,(m.get(it.pid)||0)+it.qty))});
+  return [...m].map(([pid,q])=>({p:db.products.find(x=>x.id===pid),q})).filter(x=>x.p).map(({p,q})=>`<article class="c lnk" data-prodv="${p.id}"><button class="ex" data-pedit="${p.id}" aria-label="ویرایش">✏️</button><h2 style="padding:0 0 0 44px">${esc(p.name)}</h2><p style="padding:0">${esc(p.code||"")}</p>
+    <div class="st"><div><span>موجودی</span><b>${fa(stock(p))}</b></div><div><span>قیمت خرید</span><b>${f0(p.buy||0)}</b></div><div><span>قیمت فروش</span><b>${p.noProfit||!sellOf(p)?"ثبت نشده":f0(sellOf(p))}</b></div></div>
+    ${p.img?`<div class="prw"><img class="pi" src="${p.img}" alt="${esc(p.name)}">`:""}<div class="chips"${p.img?' style="margin-top:0;flex:1;align-content:flex-start"':""}><i>از این فروشنده: ${fa(q)} عدد</i>${p.variants.filter(v=>v.qty>0).map(v=>`<i>${esc(vl(v)||"—")}: ${fa(v.qty)}</i>`).join("")}</div>${p.img?"</div>":""}</article>`);
+}
 function openSupplier(id){
   const s=db.suppliers.find(x=>x.id===id);if(!s)return;sv={id};
-  const mine=db.purchases.filter(p=>p.sup===id),row=(l,v)=>v?`<div class="vr"><span>${l}</span><b style="font-weight:600">${v}</b></div>`:"";
+  const sp=suppProds(id),mine=db.purchases.filter(p=>p.sup===id),row=(l,v)=>v?`<div class="vr"><span>${l}</span><b style="font-weight:600">${v}</b></div>`:"";
   $("pg").innerHTML=`<div class="pgh"><button class="bk" data-a="bk">→ برگشت</button><b>${esc(s.name)}</b></div><div class="pgb">
   <div class="c"><h2 style="padding:0">مشخصات</h2>${row("مسئول",esc(s.person||""))}${row("تلفن",s.phone?`<a href="tel:${esc(nd(s.phone))}">${esc(s.phone)}</a>`:"")}${row("آدرس",esc(s.addr||""))}${row("موقعیت",(s.lat!=null&&s.lng!=null?`<a href="geo:${s.lat},${s.lng}?q=${s.lat},${s.lng}">📍 باز کردن در نقشه</a>`:"")+(s.link?`${s.lat!=null?" · ":""}<a href="${esc(s.link)}" target="_blank" rel="noopener">🔗 لینک نقشه</a>`:""))}${row("اینستاگرام",esc(s.insta||""))}${row("تلگرام",esc(s.tg||""))}${row("وب‌سایت",esc(s.web||""))}${row("توضیحات",esc(s.note||""))}</div>
   <div class="c"><div class="st" style="grid-template-columns:1fr 1fr;margin-top:0"><div><span>تعداد خرید</span><b>${fa(mine.filter(p=>!p.ret).length)}</b></div><div><span>مجموع خرید</span><b>${f0(mine.reduce((a,p)=>a+p.total,0))}</b></div></div></div>
   <button class="b" style="background:#2E9E5B" data-sbuy="${id}">ثبت خرید از این فروشنده</button><button class="b g" data-sret="${id}">↩️ مرجوعی به این فروشنده</button><button class="b g" data-sedit="${id}">✏️ ویرایش مشخصات</button>
-  ${mine.length?`<div class="c"><h2 style="padding:0;font-size:1rem">خریدهای قبلی</h2>${mine.map(p=>`<div class="vr"><span><b>${fa(p.date)}${p.ret?' <span class="bd" style="background:#D9822B">مرجوعی</span>':""}</b><small>${esc(p.items.map(i=>i.name).join("، "))}${p.note?" — "+esc(p.note):""}</small></span><b>${f0(p.total)}</b></div>`).join("")}</div>`:""}</div>`;
+  ${mine.length?`<div class="c"><h2 style="padding:0;font-size:1rem">خریدهای قبلی</h2>${mine.map(p=>`<div class="vr"><span><b>${fa(p.date)}${p.ret?' <span class="bd" style="background:#D9822B">مرجوعی</span>':""}</b><small>${esc(p.items.map(i=>i.name).join("، "))}${p.note?" — "+esc(p.note):""}</small></span><b>${f0(p.total)}</b></div>`).join("")}</div>`:""}${sp.length?`<h2 style="margin:8px 4px 0;font-size:1rem">محصولات این فروشنده</h2>${sp.join("")}`:""}</div>`;
   pgOpen();
 }
 function openShop(){
@@ -1018,6 +1025,7 @@ $("pg").addEventListener("click",e=>{
   if(sx&&sr){const a2=sx.dataset.sr;if(a2==="ok")return saveSr();const i2=+sx.dataset.i,k2=+sx.dataset.k,it=sr.items[i2],p=db.products.find(x=>x.id===it.pid);
     if(a2==="p")it.q[k2]=Math.min(p.variants[k2].qty,it.q[k2]+1);else it.q[k2]=Math.max(0,it.q[k2]-1);showSr();return}
   const pe=T("[data-pedit]");if(pe){pv=null;return openEdit(+pe.dataset.pedit)}
+  const pd=T("[data-prodv]");if(pd&&!T("button,a,img.pi")){sv=null;return openProd(+pd.dataset.prodv)}
   const sr1=T("[data-sret]");if(sr1)return openSr(+sr1.dataset.sret);
   const mg=T("[data-merge]");if(mg&&bv)return openMerge(bv.n);
   const sb=T("[data-sbuy]");if(sb)return openCart("buy",+sb.dataset.sbuy);
