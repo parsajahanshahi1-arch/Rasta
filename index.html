@@ -397,7 +397,7 @@ function render(){
   }else if(tab==="k"){
     $("sub").textContent=`${fa(db.products.filter(p=>stock(p)>0).length)} کالا در انبار`;
     const q=sTxt(kq).trim(),ps=db.products.filter(p=>stock(p)>0&&(!q||sTxt([p.name,p.cat,p.code,...p.variants.map(vl)].join(" ")).includes(q)));
-    h=ps.map(p=>`<article class="c"><button class="x" data-del="k" data-id="${p.id}" aria-label="حذف">×</button><button class="ex" data-edit="k" data-id="${p.id}" aria-label="ویرایش">✏️</button><h2>${p.noProfit?'<span class="dot" aria-label="سود ثبت نشده"></span>':""}${esc(p.name)}</h2>
+    h=ps.map(p=>`<article class="c lnk" data-prod="${p.id}"><button class="x" data-del="k" data-id="${p.id}" aria-label="حذف">×</button><button class="ex" data-edit="k" data-id="${p.id}" aria-label="ویرایش">✏️</button><h2>${p.noProfit?'<span class="dot" aria-label="سود ثبت نشده"></span>':""}${esc(p.name)}</h2>
       <p>${[p.cat,p.code,"خرید: "+f0(p.buy||0)].filter(Boolean).map(esc).join(" · ")}</p>${p.noProfit?'<p class="nop">قیمت فروش (با سود) هنوز ثبت نشده</p>':""}
       <div class="st"><div><span>موجودی</span><b>${fa(stock(p))}</b></div><div><span>قیمت فروش</span><b>${f0(sellOf(p))}</b></div><div><span>فروخته‌شده</span><b>${fa(p.sold||0)}</b></div></div>
       ${p.img?`<div class="prw"><img class="pi" src="${p.img}" alt="${esc(p.name)}">`:""}<div class="chips"${p.img?' style="margin-top:0;flex:1;align-content:flex-start"':""}>${p.variants.filter(v=>v.qty>0).map(v=>`<i>${esc(vl(v))}: ${fa(v.qty)}</i>`).join("")}</div>${p.img?"</div>":""}
@@ -813,7 +813,7 @@ function openEdit(id){
 }
 function openCart(mode,sup,opt){cart={mode,sup:sup||null,date:today(),items:[newItem()],...(opt||{})};sv=null;showCart();pgOpen();$("pg").scrollTop=0}
 function pgOpen(){const g=$("pg");g.classList.remove("closing");g.classList.add("open","enter");clearTimeout(et);et=setTimeout(()=>g.classList.remove("enter"),750)}
-const closeCart=()=>{cart=null;rs=null;bv=null;iv=null;sv=null;sr=null;xl=null;const g=$("pg");g.classList.add("closing");setTimeout(()=>{g.classList.remove("closing");if(!cart&&!rs&&!bv&&!iv&&!sv&&!sr&&!xl)g.classList.remove("open")},210)};
+const closeCart=()=>{cart=null;rs=null;bv=null;iv=null;sv=null;sr=null;xl=null;pv=null;const g=$("pg");g.classList.add("closing");setTimeout(()=>{g.classList.remove("closing");if(!cart&&!rs&&!bv&&!iv&&!sv&&!sr&&!xl&&!pv)g.classList.remove("open")},210)};
 const inp=(i,f,ph,val,cls,r)=>`<input class="${cls||""}" placeholder="${ph}" aria-label="${ph}" value="${esc(val)}" data-i="${i}" data-f="${f}"${r!==undefined?` data-r="${r}"`:""}${f==="qty"||f==="unit"||f==="sell"?' inputmode="decimal"':""}>`;
 function cell(i,r,k,f,list,ph){
   const v=r[f]||"",custom=r[f+"X"]||(v&&!list.includes(v)),at=`data-i="${i}" data-r="${k}" data-f="${f}"`;
@@ -1017,6 +1017,7 @@ $("pg").addEventListener("click",e=>{
   const sx=T("[data-sr]");
   if(sx&&sr){const a2=sx.dataset.sr;if(a2==="ok")return saveSr();const i2=+sx.dataset.i,k2=+sx.dataset.k,it=sr.items[i2],p=db.products.find(x=>x.id===it.pid);
     if(a2==="p")it.q[k2]=Math.min(p.variants[k2].qty,it.q[k2]+1);else it.q[k2]=Math.max(0,it.q[k2]-1);showSr();return}
+  const pe=T("[data-pedit]");if(pe){pv=null;return openEdit(+pe.dataset.pedit)}
   const sr1=T("[data-sret]");if(sr1)return openSr(+sr1.dataset.sret);
   const mg=T("[data-merge]");if(mg&&bv)return openMerge(bv.n);
   const sb=T("[data-sbuy]");if(sb)return openCart("buy",+sb.dataset.sbuy);
@@ -1093,6 +1094,43 @@ document.addEventListener("click",e=>{
     db.purchases=db.purchases.filter(p=>!ids.includes(p.id));db.hist=db.hist.filter(h=>!ids.includes(h.id));
   });
 });
+/* product details */
+let pv=null;
+$("list").addEventListener("click",e=>{
+  const c=e.target.closest("[data-prod]");if(!c||e.target.closest("button,a,img.pi"))return;
+  openProd(+c.dataset.prod);
+});
+function openProd(id){if(!db.products.some(p=>p.id===id))return;pv=id;showProd();pgOpen();$("pg").scrollTop=0}
+function showProd(){
+  const p=db.products.find(x=>x.id===pv);if(!p)return;
+  const buys=[],sups=new Map(),sales=[];let profit=0,soldNow=0,boughtNow=0;
+  db.purchases.forEach(pu=>pu.items.forEach(it=>{
+    if(it.pid!==p.id)return;
+    const sn=pu.sup?supName(pu.sup):(pu.supName||"—");
+    buys.push({date:pu.date,sn,qty:it.qty,unit:it.unit,ret:!!pu.ret});
+    if(!pu.ret){boughtNow+=it.qty;const s=sups.get(sn)||{qty:0,last:""};s.qty+=it.qty;if(pu.date>s.last)s.last=pu.date;sups.set(sn,s)}
+  }));
+  db.orders.forEach(o=>o.items.forEach(i=>{
+    if(i.pid!==p.id)return;
+    sales.push({date:o.date,buyer:o.buyer,qty:i.qty,price:i.price,d:i.d});soldNow+=i.qty;profit+=(i.price-(i.cost==null?i.price:i.cost))*i.qty*ratio(o);
+  }));
+  const st=stock(p),sell=sellOf(p),has=!p.noProfit&&sell>0,pct=has&&p.buy>0?Math.round((sell/p.buy-1)*1000)/10:null;
+  const val=p.variants.reduce((a,v)=>a+(+v.qty||0)*(p.buy||0),0);
+  const cell=(l,v)=>`<div><span>${l}</span><b>${v}</b></div>`;
+  const sec=(t,b)=>`<div class="c"><h2 style="padding:0;font-size:1rem;margin-bottom:6px">${t}</h2>${b}</div>`;
+  const none=t=>`<p style="padding:0;color:var(--mut)">${t}</p>`;
+  const more=(a,n)=>a.length>n?`<p style="padding:0;margin-top:8px;color:var(--mut);font-size:.85rem">و ${fa(a.length-n)} مورد قدیمی‌تر…</p>`:"";
+  $("pg").innerHTML=`<div class="pgh"><button class="bk" data-a="bk">→ برگشت</button><b>مشخصات کالا</b></div><div class="pgb">
+  <div class="c"><button class="ex" data-pedit="${p.id}" aria-label="ویرایش">✏️</button><div class="prw" style="margin:0;align-items:center">${p.img?`<img class="pi" src="${p.img}" alt="${esc(p.name)}">`:""}<div style="flex:1;min-width:0"><h2 style="padding:0 0 0 44px;font-size:1.25rem">${esc(p.name)}</h2><p style="padding:0">${esc([p.code,p.cat].filter(Boolean).join(" · ")||"بدون کد و دسته")}</p></div></div>
+  <div class="st">${cell("موجودی",fa(st))}${cell("فروخته‌شده",fa(soldNow))}${cell("خریداری‌شده",fa(boughtNow))}</div>
+  <div class="st">${cell("قیمت خرید",f0(p.buy||0))}${cell("قیمت فروش",has?f0(sell):"ثبت نشده")}${cell("درصد سود",pct==null?"—":fa(pct)+"٪")}</div>
+  <div class="st">${cell("ارزش موجودی",f0(val))}${cell("سود فروش",f0(profit))}${cell("آخرین فروش",sales.length?fa(sales[0].date.slice(5)):"—")}</div></div>
+  ${sec("موجودی به تفکیک",p.variants.length?p.variants.map(v=>`<div class="vr"><span>${esc(vl(v)||"بدون رنگ و سایز")}</span><b>${fa(v.qty)}</b></div>`).join(""):none("چیزی ثبت نشده."))}
+  ${sec("از چه فروشنده‌ای گرفتیم",sups.size?[...sups].map(([n,s])=>`<div class="vr"><span><b>${esc(n)}</b><small>آخرین خرید: ${fa(s.last)}</small></span><b>${fa(s.qty)} عدد</b></div>`).join(""):none("برای این کالا خریدی با فروشنده ثبت نشده."))}
+  ${sec("تاریخچه‌ی خرید",buys.length?buys.slice(0,15).map(b=>`<div class="vr"><span><b>${fa(b.date)}${b.ret?' <span class="bd" style="background:#D9822B">مرجوعی</span>':""}</b><small>${esc(b.sn)}</small></span><span style="text-align:left"><b>${fa(Math.abs(b.qty))} عدد</b><small>${f0(b.unit)} تومان</small></span></div>`).join("")+more(buys,15):none("هنوز خریدی ثبت نشده."))}
+  ${sec("تاریخچه‌ی فروش",sales.length?sales.slice(0,15).map(x=>`<div class="vr"><span><b>${fa(x.date)}</b><small>${esc(x.buyer||"—")}</small></span><span style="text-align:left"><b>${fa(x.qty)} × ${f0(x.price)}</b>${x.d?`<small>تخفیف ${fa(x.d)}٪</small>`:""}</span></div>`).join("")+more(sales,15):none("هنوز فروشی ثبت نشده."))}
+  </div>`;
+}
 /* excel / csv import */
 let xl=null;
 const colName=i=>{let t="",n=i+1;while(n>0){const r=(n-1)%26;t=String.fromCharCode(65+r)+t;n=Math.floor((n-1)/26)}return t};
