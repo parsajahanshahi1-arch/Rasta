@@ -603,9 +603,9 @@ function commitSale(sel,date,buyer,months,phone,ex){ex=ex||{};
   sel.forEach(o=>{
     let q=0;const rows=[];
     o.rows.forEach(r=>{r.v.qty-=r.qty;q+=r.qty;rows.push({color:r.v.color,size:r.v.size,qty:r.qty})});
-    const pr=sellOf(o.p);o.p.sold=(o.p.sold||0)+q;total+=pr*q;
-    items.push({pid:o.p.id,name:o.p.name,rows,qty:q,price:pr,cost:o.p.buy||0});
-    lines.push(`${o.p.name} — ${rows.map(r=>vl(r)+" "+fa(r.qty)).join("، ")}`);
+    const base=sellOf(o.p),dp=o.d||0,pr=dp>0?Math.round(base*(1-dp/100)):base;o.p.sold=(o.p.sold||0)+q;total+=pr*q;
+    items.push({pid:o.p.id,name:o.p.name,rows,qty:q,price:pr,cost:o.p.buy||0,...(dp>0?{list:base,d:dp}:{})});
+    lines.push(`${o.p.name} — ${rows.map(r=>vl(r)+" "+fa(r.qty)).join("، ")}${dp>0?` (تخفیف ${fa(dp)}٪)`:""}`);
   });
   const disc=Math.max(0,Math.min(ex.disc||0,total-1));total-=disc;
   const o={id,date,buyer,phone:phone||phoneOf(buyer),no:++db.seq,items,total};
@@ -738,7 +738,7 @@ function openBuyer(name,keep){
     rcv=`<div class="c"><h2 style="padding:0;font-size:1rem">دریافتی این ماه</h2><p style="padding:0">هر مبلغی که وسط ماه داد اینجا بنویس؛ از قسط کم می‌شه و اگه قسط کامل شد خودکار تسویه می‌شه.</p><div class="pn" style="margin-top:10px"><b>${f0(p.amt)}</b> از ${f0(need)} تومان</div><div class="bt big"><i style="width:${pct}%"></i></div><div class="rcr"><input id="pa" class="n mny" inputmode="numeric" autocomplete="off" placeholder="مبلغ (تومان)"><button class="b" data-rc="1">ثبت</button></div>${p.list.length?`<div class="chips">${p.list.map((e,k)=>`<i>${e.c?"مانده از قبل":fa(e.d.slice(5))} · ${f0(e.a)}${e.c?"":` <b class="rx" data-rd="${k}">×</b>`}</i>`).join("")}</div>`:""}</div>`}
   $("pg").innerHTML=`<div class="pgh"><button class="bk" data-a="bk">→ برگشت</button><b>پروفایل</b></div><div class="pgb">
   ${head}${rcv}${plans}`
-  +os.map(o=>`<section class="c h"><button class="x" data-delo="${o.id}" aria-label="حذف خرید">×</button><h2 style="padding-right:42px">${fa(o.date)} ${o.inst?`<span class="bd">قسطی</span>`:""}</h2>${o.items.map(i=>`<div class="vr"><span><b>${esc(i.name)}</b><small>${i.rows.map(r=>esc(vl(r))+" ×"+fa(r.qty)).join("، ")}</small></span><span>${i.price!=null?`<small>${f0(i.price)} × ${fa(i.qty)}</small><b>${f0(i.price*i.qty)}</b>`:""}</span></div>`).join("")}<div class="sum"><span>جمع این خرید</span><span>${money(o.total)}</span></div><div class="acts"><button class="b g sm" data-inv="${o.id}">🧾 فاکتور</button><button class="b g sm" data-ret="${o.id}">↩️ مرجوعی</button></div></section>`).join("")+"</div>";
+  +os.map(o=>`<section class="c h"><button class="x" data-delo="${o.id}" aria-label="حذف خرید">×</button><h2 style="padding-right:42px">${fa(o.date)} ${o.inst?`<span class="bd">قسطی</span>`:""}</h2>${o.items.map(i=>`<div class="vr"><span><b>${esc(i.name)}</b><small>${i.rows.map(r=>esc(vl(r))+" ×"+fa(r.qty)).join("، ")}</small></span><span>${i.price!=null?`<small>${f0(i.price)} × ${fa(i.qty)}${i.d?" · تخفیف "+fa(i.d)+"٪":""}</small><b>${f0(i.price*i.qty)}</b>`:""}</span></div>`).join("")}<div class="sum"><span>جمع این خرید</span><span>${money(o.total)}</span></div><div class="acts"><button class="b g sm" data-inv="${o.id}">🧾 فاکتور</button><button class="b g sm" data-ret="${o.id}">↩️ مرجوعی</button></div></section>`).join("")+"</div>";
   if(keep)$("pg").scrollTop=keepSt;else pgOpen();
 }
 /* sale page */
@@ -757,16 +757,19 @@ function showRs(){
   +rs.items.map((it,i)=>{const p=db.products.find(x=>x.id===it.pid);if(!p)return"";
     return `<section class="c" data-s="${esc(sTxt([p.name,p.cat,p.code,...p.variants.map(vl)].join(" ")))}"><div class="prw" style="margin:0 0 14px;gap:14px;align-items:center">${p.img?`<img class="pi sm" src="${p.img}" alt="${esc(p.name)}">`:""}<div style="flex:1;min-width:0"><h2 style="padding-right:0">${esc(p.name)}</h2>
     <p style="padding:0;margin:4px 0 0;color:var(--mut)">قیمت هر عدد: <b style="color:var(--ink)">${f0(sellOf(p))}</b> تومان</p></div></div>
-    ${p.variants.map((v,k)=>v.qty>0?`<div class="vr"><span>${esc(vl(v))}<small>موجودی ${fa(v.qty)}</small></span>${stp(i,k,it.q[k])}</div>`:"").join("")}</section>`}).join("")
+    ${p.variants.map((v,k)=>v.qty>0?`<div class="vr"><span>${esc(vl(v))}<small>موجودی ${fa(v.qty)}</small></span>${stp(i,k,it.q[k])}</div>`:"").join("")}${it.q.some(n=>n>0)?`<div style="margin-top:6px"><label for="rd${i}" style="margin-top:10px">درصد تخفیف این کالا</label><input id="rd${i}" data-rd="${i}" class="n pct" inputmode="decimal" autocomplete="off" placeholder="مثلاً 10" value="${esc(it.d||"")}"><small class="hint" id="rdh${i}"></small></div>`:""}</section>`}).join("")
   +`<div class="empty" id="rsnone" hidden>چنین کالایی وجود ندارد.</div>
   <div class="c" id="ptc"><label style="margin-top:0">نوع پرداخت<span class="req">*</span></label>
   <div class="pts"><button class="pt${rs.pt==="c"?" on":""}" data-a="pt" data-v="c">${rs.pt==="c"?"✓ ":""}نقدی</button><button class="pt${I?" on":""}" data-a="pt" data-v="i">${I?"✓ ":""}قسطی</button></div>
   ${I?`<div${rs.pulse==="t"?' class="popin"':""}><label>چند ماهه؟<span class="req">*</span></label><div class="chips" style="margin-top:0">${[1,2,3,4,5,6].map(n=>`<button class="ch${rs.months===n?" on":""}" data-a="mo" data-v="${n}">${fa(n)} ماهه</button>`).join("")}</div><div class="sum"><span id="ins"></span></div><label for="rpre">پیش‌پرداخت</label><input id="rpre" class="n mny" inputmode="numeric" autocomplete="off" placeholder="مثلاً 500,000" value="${esc(fmtN(rs.pre))}"></div>`:""}<label for="rdis">تخفیف</label><input id="rdis" class="n mny" inputmode="decimal" autocomplete="off" placeholder="مبلغ یا درصد، مثلاً 50,000 یا 10٪" value="${esc(fmtN(rs.disc))}"></div>
   <p class="err" id="rerr"></p></div><div class="bar"><div style="flex:1"><small>تعداد کل: <b id="rq"></b></small><br><b id="rt"></b></div><button class="b" data-a="sv">ثبت</button></div>`;
-  $("pg").scrollTop=st;refreshNames($("rn"));rsFilter();rsSums();rs.pulse=null;
+  $("pg").scrollTop=st;refreshNames($("rn"));rsFilter();rsSums();rs.items.forEach((_,i)=>rdHint(i));rs.pulse=null;
 }
 function rsFilter(){const q=sTxt(rs.q||"").trim();let n=0;document.querySelectorAll("#pg [data-s]").forEach(el=>{const h=!!q&&!el.dataset.s.includes(q);el.hidden=h;if(!h)n++});const z=$("rsnone");if(z)z.hidden=n>0}
-function rsTotal(){let q=0,t=0;rs.items.forEach(it=>{const n=it.q.reduce((a,b)=>a+b,0),p=db.products.find(x=>x.id===it.pid);q+=n;t+=n*(p?sellOf(p):0)});return{q,t}}
+const rsDisc=it=>{const d=Number(nd(String(it.d||"")).replace(/[^\d.]/g,""));return isFinite(d)&&d>0?Math.min(d,100):0};
+const rsUnit=(p,it)=>{const d=rsDisc(it);return d>0?Math.round(sellOf(p)*(1-d/100)):sellOf(p)};
+function rdHint(i){const el=$("rdh"+i);if(!el)return;const it=rs.items[i],p=db.products.find(x=>x.id===it.pid),d=rsDisc(it);el.textContent=d>0&&p?`قیمت هر عدد بعد از تخفیف: ${money(rsUnit(p,it))}`:""}
+function rsTotal(){let q=0,t=0;rs.items.forEach(it=>{const n=it.q.reduce((a,b)=>a+b,0),p=db.products.find(x=>x.id===it.pid);q+=n;t+=n*(p?rsUnit(p,it):0)});return{q,t}}
 function rsCalc(){
   const {q,t}=rsTotal();let d=0;const x=nd(String(rs.disc||"")).trim();
   if(x){if(/[%٪]/.test(x)){const pc=Number(x.replace(/[^\d.]/g,""));d=isFinite(pc)?Math.round(t*Math.min(pc,100)/100):0}else{const n=num(x);d=isFinite(n)&&n>0?Math.min(n,t):0}}
@@ -788,7 +791,7 @@ function saveRs(){
   rs.items.forEach(it=>{
     const p=db.products.find(x=>x.id===it.pid);if(!p)return;
     const rows=[];p.variants.forEach((v,k)=>{if(it.q[k]>0)rows.push({v,qty:it.q[k]})});
-    if(rows.length)sel.push({p,rows});
+    if(rows.length)sel.push({p,rows,d:rsDisc(it)});
   });
   if(!sel.length)return e("هنوز مدلی انتخاب نکردی. با + تعداد رو بزن.",document.querySelector("#pg section"));
   if(!rs.pt)return e("نقدی یا قسطی بودن رو انتخاب کن.",$("ptc"));
@@ -907,7 +910,7 @@ function invText(o){
   const sh=db.shop,L=[`🧾 فاکتور فروش — ${sh.name||"فروشگاه"}`];
   if(sh.phone)L.push("📞 "+sh.phone);if(sh.addr)L.push(sh.addr);
   L.push(`شماره: ${fa(o.no||"")} | تاریخ: ${fa(o.date)}`,`خریدار: ${o.buyer||"—"}${o.phone?" ("+o.phone+")":""}`,"──────────");
-  o.items.forEach(i=>i.rows.forEach(r=>L.push(`${i.name}${r.color||r.size?" "+vl(r):""} — ${fa(r.qty)} × ${f0(i.price||0)} = ${f0((i.price||0)*r.qty)}`)));
+  o.items.forEach(i=>i.rows.forEach(r=>L.push(`${i.name}${r.color||r.size?" "+vl(r):""}${i.d?` (تخفیف ${fa(i.d)}٪)`:""} — ${fa(r.qty)} × ${f0(i.price||0)} = ${f0((i.price||0)*r.qty)}`)));
   if(o.disc)L.push("تخفیف: "+money(o.disc));L.push("──────────","جمع کل: "+money(o.total));if(o.pre)L.push((o.merged?"پرداخت‌شده تا قبل از یکی‌کردن: ":"پیش‌پرداخت: ")+money(o.pre));
   if(o.inst){L.push("",`خرید قسطی — ${fa(o.inst.months)} ماهه`);for(let n=1;n<=o.inst.months;n++)L.push(`قسط ${fa(n)}: ${fa(addM(o.inst.start,n-1))} — ${money(instAmt(o,n))}${n<=o.inst.paid?" ✓ پرداخت شد":""}`);L.push("باقی‌مانده: "+money(act(o)?remain(o):0))}
   return L.join("\n");
@@ -987,6 +990,7 @@ $("pg").addEventListener("input",e=>{
     if(e.target.id==="rn")rs.name=e.target.value;
     else if(e.target.id==="rnp")rs.phone=e.target.value;
     else if(e.target.id==="rsq"){rs.q=e.target.value;rsFilter()}
+    else if(e.target.dataset.rd!==undefined){const i=+e.target.dataset.rd;rs.items[i].d=nd(e.target.value).replace(/[^\d.]/g,"");rdHint(i);rsSums()}
     else if(e.target.id==="rpre"){rs.pre=e.target.value;rsSums()}
     else if(e.target.id==="rdis"){rs.disc=e.target.value;rsSums()}
   }
