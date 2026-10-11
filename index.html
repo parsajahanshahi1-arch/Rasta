@@ -239,6 +239,7 @@ button:active{transform:scale(.96)}
 </head>
 <body>
 <header><h1>حسابداری رستا</h1><p id="sub"></p><button class="hm" id="hm" aria-label="منو">☰</button><button class="hm" id="bell" style="left:66px" aria-label="اعلان‌ها">🔔<i class="nb" id="nb" hidden></i></button><button class="hm" id="scan" style="left:118px" aria-label="اسکن با دوربین">📷</button></header>
+<input type="file" id="xlf" accept=".xlsx,.xls,.csv,.txt,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
 <input type="file" id="pimg" accept="image/*" hidden>
 <input type="file" id="rf" accept=".json,application/json" hidden>
 <input type="file" id="cam" accept="image/*" capture="environment" hidden>
@@ -809,7 +810,7 @@ function openEdit(id){
 }
 function openCart(mode,sup,opt){cart={mode,sup:sup||null,date:today(),items:[newItem()],...(opt||{})};sv=null;showCart();pgOpen();$("pg").scrollTop=0}
 function pgOpen(){const g=$("pg");g.classList.remove("closing");g.classList.add("open","enter");clearTimeout(et);et=setTimeout(()=>g.classList.remove("enter"),750)}
-const closeCart=()=>{cart=null;rs=null;bv=null;iv=null;sv=null;sr=null;const g=$("pg");g.classList.add("closing");setTimeout(()=>{g.classList.remove("closing");if(!cart&&!rs&&!bv&&!iv&&!sv&&!sr)g.classList.remove("open")},210)};
+const closeCart=()=>{cart=null;rs=null;bv=null;iv=null;sv=null;sr=null;xl=null;const g=$("pg");g.classList.add("closing");setTimeout(()=>{g.classList.remove("closing");if(!cart&&!rs&&!bv&&!iv&&!sv&&!sr&&!xl)g.classList.remove("open")},210)};
 const inp=(i,f,ph,val,cls,r)=>`<input class="${cls||""}" placeholder="${ph}" aria-label="${ph}" value="${esc(val)}" data-i="${i}" data-f="${f}"${r!==undefined?` data-r="${r}"`:""}${f==="qty"||f==="unit"||f==="sell"?' inputmode="decimal"':""}>`;
 function cell(i,r,k,f,list,ph){
   const v=r[f]||"",custom=r[f+"X"]||(v&&!list.includes(v)),at=`data-i="${i}" data-r="${k}" data-f="${f}"`;
@@ -934,7 +935,7 @@ function invAct(a){
 /* menu */
 function openDrawer(){
   const n=people().length;
-  $("dw").innerHTML=`<h3>منو</h3><button data-go="i"><span>👥 افراد قسطی</span>${n?`<span class="bd">${fa(n)}</span>`:""}</button><button data-go="f">💰 سود</button><button data-go="p">🏠 خانه</button><button data-go="k">👗 کالاها</button><button data-go="s">🏬 فروشنده‌ها</button><button data-sr0="1">↩️ مرجوعی به فروشنده</button><button data-go="h">🕘 هیستوری</button><button data-go="m">📊 آمار</button><button data-go="set">⚙️ تنظیمات</button>`;
+  $("dw").innerHTML=`<h3>منو</h3><button data-go="i"><span>👥 افراد قسطی</span>${n?`<span class="bd">${fa(n)}</span>`:""}</button><button data-go="f">💰 سود</button><button data-go="p">🏠 خانه</button><button data-go="k">👗 کالاها</button><button data-go="s">🏬 فروشنده‌ها</button><button data-sr0="1">↩️ مرجوعی به فروشنده</button><button data-xl0="1">📥 وارد کردن از اکسل</button><button data-go="h">🕘 هیستوری</button><button data-go="m">📊 آمار</button><button data-go="set">⚙️ تنظیمات</button>`;
   $("dw").querySelectorAll("button").forEach((b,i)=>b.style.setProperty("--d",i));$("dw").classList.add("open");$("dwo").classList.add("open");
 }
 const closeDrawer=()=>{$("dw").classList.remove("open");$("dwo").classList.remove("open")};
@@ -1088,6 +1089,137 @@ document.addEventListener("click",e=>{
     db.purchases=db.purchases.filter(p=>!ids.includes(p.id));db.hist=db.hist.filter(h=>!ids.includes(h.id));
   });
 });
+/* excel / csv import */
+let xl=null;
+const colName=i=>{let t="",n=i+1;while(n>0){const r=(n-1)%26;t=String.fromCharCode(65+r)+t;n=Math.floor((n-1)/26)}return t};
+const xmlDec=t=>t.replace(/&#x([0-9a-f]+);/gi,(m,h)=>String.fromCodePoint(parseInt(h,16))).replace(/&#(\d+);/g,(m,d)=>String.fromCodePoint(+d)).replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&amp;/g,"&");
+const xAttr=(tag,n)=>{const m=tag.match(new RegExp("(?:^|\\s)"+n+'="([^"]*)"'));return m?xmlDec(m[1]):""};
+const xText=x=>{let o="";x.replace(/<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g,(m,v)=>{o+=xmlDec(v);return m});return o};
+async function inflateRaw(u8){return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer())}
+async function unzip(buf){
+  const dv=new DataView(buf),u8=new Uint8Array(buf),td=new TextDecoder();let e=u8.length-22;
+  while(e>=0&&dv.getUint32(e,true)!==0x06054b50)e--;
+  if(e<0)throw new Error("zip");
+  const n=dv.getUint16(e+10,true),out={};let p=dv.getUint32(e+16,true);
+  for(let i=0;i<n;i++){
+    if(dv.getUint32(p,true)!==0x02014b50)break;
+    const method=dv.getUint16(p+10,true),cs=dv.getUint32(p+20,true),nl=dv.getUint16(p+28,true),el=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true),off=dv.getUint32(p+42,true),name=td.decode(u8.subarray(p+46,p+46+nl));
+    p+=46+nl+el+cl;
+    if(!/^xl\/(workbook\.xml|_rels\/workbook\.xml\.rels|sharedStrings\.xml|worksheets\/[^/]+\.xml)$/.test(name))continue;
+    const ln=dv.getUint16(off+26,true),le=dv.getUint16(off+28,true),st=off+30+ln+le,data=u8.subarray(st,st+cs);
+    out[name]=td.decode(method===0?data:await inflateRaw(data));
+  }
+  return out;
+}
+async function readXlsx(buf){
+  const z=await unzip(buf),ss=[];
+  if(z["xl/sharedStrings.xml"])(z["xl/sharedStrings.xml"].match(/<si\b[\s\S]*?<\/si>/g)||[]).forEach(si=>ss.push(xText(si)));
+  let path="xl/worksheets/sheet1.xml";
+  try{
+    const sh=(z["xl/workbook.xml"].match(/<sheet\b[^>]*>/)||[""])[0],rid=xAttr(sh,"r:id");
+    (z["xl/_rels/workbook.xml.rels"].match(/<Relationship\b[^>]*>/g)||[]).forEach(r=>{if(xAttr(r,"Id")===rid){const t=xAttr(r,"Target");path=t[0]==="/"?t.slice(1):"xl/"+t}});
+  }catch(e){}
+  if(!z[path])path=Object.keys(z).find(k=>/worksheets\//.test(k));
+  if(!path)throw new Error("sheet");
+  const rows=[];
+  (z[path].match(/<row\b[\s\S]*?<\/row>/g)||[]).forEach(r=>{
+    const row=[];
+    (r.match(/<c\b[^>]*?(?:\/>|>[\s\S]*?<\/c>)/g)||[]).forEach(c=>{
+      const tag=(c.match(/^<c\b[^>]*?>/)||[c])[0],ref=xAttr(tag,"r"),t=xAttr(tag,"t"),m=ref.match(/^([A-Z]+)/);
+      let ci=row.length;if(m){ci=0;for(const ch of m[1])ci=ci*26+ch.charCodeAt(0)-64;ci--}
+      let val="";const v=c.match(/<v>([\s\S]*?)<\/v>/);
+      if(t==="s"&&v)val=ss[+v[1]]||"";else if(t==="inlineStr")val=xText(c);else if(v)val=xmlDec(v[1]);
+      row[ci]=val;
+    });
+    rows.push(Array.from(row,x=>x==null?"":String(x)));
+  });
+  return rows.filter(r=>r.some(x=>x.trim()!==""));
+}
+function readCsv(t){
+  t=t.replace(/^\uFEFF/,"");
+  const first=t.split(/\r?\n/)[0]||"",d=[",",";","\t"].map(c=>[c,first.split(c).length]).sort((a,b)=>b[1]-a[1])[0][0],rows=[];
+  let row=[],cur="",q=false;
+  for(let i=0;i<t.length;i++){const ch=t[i];
+    if(q){if(ch==='"'){if(t[i+1]==='"'){cur+='"';i++}else q=false}else cur+=ch}
+    else if(ch==='"')q=true;else if(ch===d){row.push(cur);cur=""}
+    else if(ch==="\n"||ch==="\r"){if(ch==="\r"&&t[i+1]==="\n")i++;row.push(cur);rows.push(row);row=[];cur=""}
+    else cur+=ch}
+  if(cur!==""||row.length){row.push(cur);rows.push(row)}
+  return rows.filter(r=>r.some(x=>x.trim()!==""));
+}
+const XK={name:/نام|کالا|محصول|شرح|عنوان|name|item|product|desc/i,qty:/تعداد|عدد|مقدار|qty|quant|count|pcs/i,price:/فی|قیمت|مبلغ واحد|price|cost|rate/i,color:/رنگ|colou?r/i,size:/سایز|اندازه|size/i,code:/کد|code|sku|barcode/i,cat:/دسته|گروه|categ|type/i};
+function xlDetect(){
+  const h=xl.rows[0]||[],map={};
+  Object.keys(XK).forEach(k=>{const i=h.findIndex((c,j)=>XK[k].test(String(c))&&!/جمع|total|sum|کل/i.test(String(c))&&!Object.values(map).includes(j));map[k]=i>=0?i:null});
+  xl.hasHead=Object.values(map).some(v=>v!=null);
+  if(!xl.hasHead)Object.assign(map,{name:0,qty:1,price:2});
+  xl.map=map;
+}
+function xlItems(){
+  const m=xl.map,res={items:[],bad:[]},start=xl.hasHead?1:0,div=xl.rial?10:1,groups=new Map();
+  const cell=(r,k)=>m[k]==null?"":String(r[m[k]]==null?"":r[m[k]]).trim();
+  const nm=v=>Number(nd(String(v)).replace(/[^\d.]/g,""));
+  for(let i=start;i<xl.rows.length;i++){
+    const r=xl.rows[i],name=cell(r,"name"),q=Math.round(nm(cell(r,"qty"))),price=Math.round(nm(cell(r,"price"))/div);
+    if(!name&&!cell(r,"qty")&&!cell(r,"price"))continue;
+    if(!name||!(q>=1)||!isFinite(q)||!isFinite(price)||cell(r,"price")===""){res.bad.push(i+1);continue}
+    const key=nk(name)+"|"+price,g=groups.get(key)||{name,unit:price,rows:[],cat:cell(r,"cat"),code:cell(r,"code")},color=cell(r,"color"),size=cell(r,"size"),ex=g.rows.find(x=>x.color===color&&x.size===size);
+    if(ex)ex.qty+=q;else g.rows.push({color,size,qty:q});groups.set(key,g);
+  }
+  res.items=[...groups.values()].map(g=>{const s=parseSell(xl.pct,g.unit);return{...g,sell:isFinite(s)?s:NaN,img:""}});
+  return res;
+}
+function xlPrev(){
+  const {items,bad}=xlItems(),n=items.reduce((a,i)=>a+i.rows.reduce((b,r)=>b+r.qty,0),0),tot=items.reduce((a,i)=>a+i.unit*i.rows.reduce((b,r)=>b+r.qty,0),0);
+  $("xlprev").innerHTML=items.length?`<div class="sum" style="margin-top:0"><span>${fa(items.length)} کالا · ${fa(n)} عدد</span><span>${money(tot)}</span></div>`+items.slice(0,6).map(i=>`<div class="vr"><span><b>${esc(i.name)}</b><small>${esc(i.rows.map(r=>(vl(r)||"—")+" × "+r.qty).join("، "))}</small></span><b>${f0(i.unit)}</b></div>`).join("")+(items.length>6?`<p style="color:var(--mut);margin:8px 0 0;font-size:.85rem">و ${fa(items.length-6)} کالای دیگه…</p>`:""):'<div class="empty" style="padding:16px">هیچ ردیف درستی پیدا نشد. ستون‌ها رو بالا درست انتخاب کن.</div>';
+  const w=$("xlwarn");if(w)w.textContent=bad.length?`${fa(bad.length)} ردیف رد شد (اسم، تعداد یا قیمت درست نبود): ردیف ${bad.slice(0,8).map(fa).join("، ")}${bad.length>8?" و …":""}`:"";
+  const g=$("xlgo");if(g)g.disabled=!items.length;
+}
+function openXl(){xl={rows:null,file:"",map:{},hasHead:true,rial:false,pct:"",sup:null,supTxt:"",date:today()};showXl();pgOpen();$("pg").scrollTop=0}
+function showXl(){
+  const st=$("pg").scrollTop;
+  let h=`<div class="pgh"><button class="bk" data-a="bk">→ برگشت</button><b>وارد کردن از اکسل</b></div><div class="pgb"><div class="c"><h2 style="padding:0;font-size:1rem">۱. فایل</h2><p style="padding:0">فایل اکسل (xlsx) یا csv رو انتخاب کن؛ با ستون‌هایی مثل نام کالا، تعداد، قیمت، رنگ و سایز.</p><button class="b g sm" style="width:100%" data-xl="pick">📂 ${xl.rows?"انتخاب فایل دیگه":"انتخاب فایل"}</button>${xl.rows?`<p style="padding:0;margin-top:8px"><b>${esc(xl.file)}</b> · ${fa(xl.rows.length)} ردیف</p>`:""}</div>`;
+  if(xl.rows){
+    const w=Math.max(1,...xl.rows.slice(0,20).map(r=>r.length)),hd=xl.rows[0]||[];
+    const opts=sel=>`<option value="">— ندارد —</option>`+Array.from({length:w},(_,i)=>`<option value="${i}"${sel===i?" selected":""}>${colName(i)}${xl.hasHead&&String(hd[i]||"").trim()?" — "+esc(String(hd[i]).slice(0,16)):""}</option>`).join("");
+    const F=[["name","نام کالا *"],["qty","تعداد *"],["price","قیمت خرید *"],["color","رنگ"],["size","سایز"],["code","کد"],["cat","دسته"]];
+    h+=`<div class="c"><h2 style="padding:0;font-size:1rem">۲. ستون‌ها</h2><label class="chk"><input type="checkbox" id="xlh"${xl.hasHead?" checked":""}> ردیف اول عنوان ستون‌هاست</label><div class="two">${F.map(([k,t])=>`<div><label style="margin-top:12px">${t}</label><select data-xm="${k}">${opts(xl.map[k])}</select></div>`).join("")}</div>
+    <label>قیمت‌ها به</label><select id="xlu"><option value="0"${xl.rial?"":" selected"}>تومان</option><option value="1"${xl.rial?" selected":""}>ریال (تقسیم بر ۱۰ می‌شه)</option></select>
+    <label for="xlp">درصد سود</label><input id="xlp" class="n pct" inputmode="decimal" placeholder="مثلاً 40" autocomplete="off" value="${esc(xl.pct)}"><small style="display:block;color:var(--mut);margin-top:6px">اگه خالی بذاری، قیمت فروش کالاها بعداً ثبت می‌شه.</small></div>
+    <div class="c"><h2 style="padding:0;font-size:1rem">۳. فروشنده و تاریخ</h2><label for="xls">فروشنده</label><select id="xls"><option value="">— انتخاب کن —</option>${db.suppliers.map(s=>`<option value="${s.id}"${xl.sup===s.id?" selected":""}>${esc(s.name)}</option>`).join("")}</select><label for="xlst">یا اسم فروشنده</label><input id="xlst" autocomplete="off" value="${esc(xl.supTxt)}"><label for="xld">تاریخ</label><input id="xld" class="n" inputmode="numeric" value="${esc(xl.date)}"></div>
+    <div class="c"><h2 style="padding:0;font-size:1rem">۴. پیش‌نمایش</h2><div id="xlprev" style="margin-top:8px"></div><p class="err" id="xlwarn"></p></div><p class="err" id="xlerr"></p></div><div class="bar"><button class="b" id="xlgo" data-xl="go">ثبت خرید</button></div>`;
+  }else h+="</div>";
+  $("pg").innerHTML=h;$("pg").scrollTop=st;if(xl.rows)xlPrev();
+}
+function xlSave(){
+  const {items}=xlItems();if(!items.length)return;
+  if(!/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(nd(xl.date))){$("xlerr").textContent="تاریخ رو مثل 1405/07/09 بنویس.";return}
+  const n=items.length;commit(items,"buy",xl.sup,xl.date,xl.supTxt.trim());closeCart();toast(`${fa(n)} کالا به خرید اضافه شد ✓`);
+}
+$("xlf").addEventListener("change",async e=>{
+  const f=e.target.files[0];e.target.value="";if(!f||!xl)return;
+  if(/\.xls$/i.test(f.name))return tell("این فایل اکسل قدیمیه (xls). توی اکسل «Save as» رو بزن و به‌صورت xlsx یا csv ذخیره‌ش کن.");
+  try{
+    const buf=await f.arrayBuffer(),u=new Uint8Array(buf);let rows;
+    if(u[0]===0x50&&u[1]===0x4b){if(typeof DecompressionStream==="undefined")return tell("مرورگرت قدیمیه. فایل رو به‌صورت csv ذخیره کن.");rows=await readXlsx(buf)}
+    else{let t;try{t=new TextDecoder("utf-8",{fatal:true}).decode(buf)}catch(x){t=new TextDecoder("windows-1256").decode(buf)}rows=readCsv(t)}
+    if(!rows.length)return tell("فایل خالیه.");
+    xl.rows=rows;xl.file=f.name;xlDetect();showXl();
+  }catch(x){tell("فایل خونده نشد. مطمئن شو xlsx یا csv باشه.")}
+});
+$("pg").addEventListener("click",e=>{const b=e.target.closest("[data-xl]");if(!b||!xl)return;if(b.dataset.xl==="pick")$("xlf").click();else if(b.dataset.xl==="go")xlSave()});
+$("pg").addEventListener("change",e=>{
+  const t=e.target;if(!xl)return;
+  if(t.dataset.xm){xl.map[t.dataset.xm]=t.value===""?null:+t.value;xlPrev()}
+  else if(t.id==="xlh"){xl.hasHead=t.checked;xlPrev()}
+  else if(t.id==="xlu"){xl.rial=t.value==="1";xlPrev()}
+  else if(t.id==="xls")xl.sup=t.value?+t.value:null;
+});
+$("pg").addEventListener("input",e=>{
+  const t=e.target;if(!xl)return;
+  if(t.id==="xlp"){xl.pct=t.value;xlPrev()}else if(t.id==="xlst")xl.supTxt=t.value;else if(t.id==="xld")xl.date=t.value;
+});
+document.addEventListener("click",e=>{if(e.target.closest("[data-xl0]")){closeDrawer();openXl()}});
 /* auto backup (one internal copy, replaced weekly) */
 const idb=()=>new Promise((res,rej)=>{const r=indexedDB.open("resta-bak",1);r.onupgradeneeded=()=>r.result.createObjectStore("s");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
 async function snapGet(){try{const d=await idb();return await new Promise((res,rej)=>{const q=d.transaction("s").objectStore("s").get("snap");q.onsuccess=()=>res(q.result||null);q.onerror=()=>rej()})}catch(e){return null}}
